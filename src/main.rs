@@ -7,21 +7,13 @@ use esp_println::println;
 use postcard::to_slice_cobs;
 use serde::Serialize;
 use core::{cell::RefCell, fmt::Write, borrow::BorrowMut};
-use hal::{
-    clock::ClockControl,
-    gpio::{Event, Gpio18, Input, PullUp, IO},
-    interrupt,
-    peripherals::{self, Peripherals},
-    prelude::*,
-    macros::ram,
-    xtensa_lx,
-    Delay,
-    i2c::I2C,
-    Uart,
-    Rtc
-};
+use hal::{clock::ClockControl, gpio::{Event, Gpio18, Input, PullUp, IO}, interrupt, peripherals::{self, Peripherals}, prelude::*, macros::ram, xtensa_lx, Delay, i2c::I2C, Uart, Rtc, uart};
 use itertools::Itertools;
 use core::sync::atomic::{AtomicBool, Ordering};
+use hal::gpio::{Floating, GpioPin, Output, PushPull};
+use hal::uart::config::{Config, Parity, StopBits};
+use hal::uart::config::DataBits::DataBits8;
+use hal::uart::TxRxPins;
 
 #[derive(Debug, Clone, Copy, Serialize)]
 struct SensorSample {
@@ -53,7 +45,15 @@ fn main() -> ! {
     let clocks = ClockControl::max(system.clock_control).freeze();
     let mut delay = Delay::new(&clocks);
     let rtc = Rtc::new(peripherals.RTC_CNTL);
-    let mut uart0 = Uart::new(peripherals.UART0, &mut system.peripheral_clock_control);
+    let config = Config {
+        baudrate: 115200,
+        data_bits: DataBits8,
+        parity: Parity::ParityEven,
+        stop_bits: StopBits::STOP1
+    };
+    // let mut uart0 = Uart::new(peripherals.UART0, &mut system.peripheral_clock_control);
+    type Pins<'a> = TxRxPins<'a, GpioPin<Output<PushPull>, 2>, GpioPin<Input<Floating>, 0>>;
+    let mut uart0 = Uart::new_with_config(peripherals.UART0, Some(config), None::<Pins<'_>>, &clocks, &mut system.peripheral_clock_control);
 
     let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
     let mut i2c = I2C::new(
@@ -112,7 +112,7 @@ fn main() -> ! {
             if count < 29 {
                 count += 1;
             } else {
-                let mut buff = [0u8; 500];
+                let mut buff = [0u8; 525];
                 to_slice_cobs(&samples, &mut buff).ok();
                 writeln!(uart0, "{:02x}", buff.iter().format("")).ok();
                 count = 0;
