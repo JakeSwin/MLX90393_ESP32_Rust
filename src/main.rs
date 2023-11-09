@@ -45,17 +45,20 @@ fn main() -> ! {
     let clocks = ClockControl::max(system.clock_control).freeze();
     let mut delay = Delay::new(&clocks);
     let rtc = Rtc::new(peripherals.RTC_CNTL);
-    let config = Config {
-        baudrate: 115200,
-        data_bits: DataBits8,
-        parity: Parity::ParityEven,
-        stop_bits: StopBits::STOP1
-    };
-    // let mut uart0 = Uart::new(peripherals.UART0, &mut system.peripheral_clock_control);
-    type Pins<'a> = TxRxPins<'a, GpioPin<Output<PushPull>, 2>, GpioPin<Input<Floating>, 0>>;
-    let mut uart0 = Uart::new_with_config(peripherals.UART0, Some(config), None::<Pins<'_>>, &clocks, &mut system.peripheral_clock_control);
-
     let io = IO::new(peripherals.GPIO, peripherals.IO_MUX);
+    // let config = Config {
+    //     baudrate: 115200,
+    //     data_bits: DataBits8,
+    //     parity: Parity::ParityEven,
+    //     stop_bits: StopBits::STOP1
+    // };
+    // let pins = TxRxPins::new_tx_rx(
+    //     io.pins.gpio1.into_push_pull_output(),
+    //     io.pins.gpio2.into_floating_input()
+    // );
+    let mut uart0 = Uart::new(peripherals.UART0, &mut system.peripheral_clock_control);
+    // let mut uart0 = Uart::new_with_config(peripherals.UART0, Some(config), Some(pins), &clocks, &mut system.peripheral_clock_control);
+
     let mut i2c = I2C::new(
         peripherals.I2C0,
         io.pins.gpio5,
